@@ -94,19 +94,22 @@
   "Generic property deleter. Removes the provided key and its value from the config file."
   (delete-from-plistf (cddr config) key))
 
+(defun parse-config (path)
+  (with-open-file (strm (ensure-directories-exist path) 
+    			:direction :input
+    			:if-does-not-exist :create)
+    (read strm)))
+
+(defmacro overwrite (path &body body)
+  `(with-open-file (strm ,path :direction :output :if-exists :supersede)
+     ,@body))
+
 (defmacro with-config (var path &body body)
   "Reads .asd config at filepath and binds the result to var. 
    Then executes body & writes back to the config file.
    Assumes no code besides (asdf:defsystem ...) is in the file.
-   Eats comments. Overwrites."
-  ;TODO - handle errors so that my file doesn't get eaten
-  `(let ((,var)) 
-     (with-open-file (strm (ensure-directories-exist ,path) 
-			   :direction :input
-			   :if-does-not-exist :create)
-       (setf ,var (read strm)))
-     (with-open-file (strm ,path
-			   :direction :output
-			   :if-exists :supersede)
-       
-       (format strm "~S" ,var))))
+   Eats comments. Overwrites. Capitalizes."
+  `(let ((,var (parse-config ,path)))
+     ,@body
+     (overwrite ,path (format strm "~S~%~%" ,var))))
+
