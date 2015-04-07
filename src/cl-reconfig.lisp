@@ -4,7 +4,8 @@
 
 (in-package #:cl-reconfig)
 
-;(defvar *most-recent-system* nil)
+;Where the path is saved after every successful 'with-config operation so that it doesn't have to be re-typed.
+(defvar *most-recent-config-file* nil)
 
 ;From serapeum. Didn't load the library as it doesn't always compile.
 (declaim (inline unsplice))
@@ -104,12 +105,13 @@
   `(with-open-file (strm ,path :direction :output :if-exists :supersede)
      ,@body))
 
-(defmacro with-config (var path &body body)
+(defmacro with-config ((var &optional (path *most-recent-config-file*)) &body body)
   "Reads .asd config at filepath and binds the result to var. 
    Then executes body & writes back to the config file.
    Assumes no code besides (asdf:defsystem ...) is in the file.
    Eats comments. Overwrites. Capitalizes."
   `(let ((,var (parse-config ,path)))
      ,@body
-     (overwrite ,path (format strm "~S~%~%" ,var))))
+     (overwrite ,path (format strm "~S~%~%" ,var))
+     (setf *most-recent-config-file* ,path)))
 
